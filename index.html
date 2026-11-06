@@ -1,0 +1,708 @@
+<title>설비 QR 유지보수</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: mobile-first field console. Sticky top bar, bottom tab bar, single column on phones,
+   two columns (checklist | decision) on wide screens. Touch targets 48px+ for gloved hands. */
+:root {
+  --bg: #e9edf1;
+  --surface: #ffffff;
+  --surface-2: #dfe5ea;
+  --ink: #131f2a;
+  --ink-2: #4a5b69;
+  --line: #c9d2da;
+  --accent: #0a58b0;
+  --accent-ink: #ffffff;
+  --crit: #c4301c;
+  --warn: #a66a00;
+  --ok: #1b7a4b;
+  --hl: #ffcf33;
+  --hl-ink: #1a1400;
+  --font-display: 'Barlow Condensed', 'Noto Sans KR', 'Arial Narrow', sans-serif;
+  --font-body: 'Noto Sans KR', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d141b; --surface: #151f29; --surface-2: #1e2b37; --ink: #e8eef3; --ink-2: #9db0bf;
+    --line: #2b3a48; --accent: #62a6ff; --accent-ink: #06121f; --crit: #ff7b64; --warn: #f0b44c; --ok: #4cc38a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d141b; --surface: #151f29; --surface-2: #1e2b37; --ink: #e8eef3; --ink-2: #9db0bf;
+  --line: #2b3a48; --accent: #62a6ff; --accent-ink: #06121f; --crit: #ff7b64; --warn: #f0b44c; --ok: #4cc38a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.6;
+  padding-bottom: 96px; min-height: 100%;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface); }
+.gut { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { text-wrap: balance; }
+button, input, textarea, select { font: inherit; color: inherit; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.mono { font-family: var(--font-mono); font-weight: 500; letter-spacing: .01em; }
+.tnum { font-variant-numeric: tabular-nums; }
+.svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* top bar */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+.bar { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: 12px; min-height: 56px; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: .02em; text-decoration: none; color: var(--ink); }
+.brand-mark { width: 30px; height: 30px; border-radius: 6px; background: var(--ink); color: var(--hl); display: grid; place-items: center; }
+.brand-mark .svg { width: 20px; height: 20px; stroke-width: 2.2; }
+.bar .grow { flex: 1; }
+.crumb { font-size: 13px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; text-decoration: none; min-height: 44px; }
+
+main { max-width: 1040px; margin: 0 auto; padding-block: 20px 8px; display: flex; flex-direction: column; gap: 20px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); font-weight: 500; }
+.h-page { font-family: var(--font-display); font-weight: 700; font-size: clamp(30px, 7vw, 44px); line-height: 1.1; letter-spacing: .01em; }
+.lead { color: var(--ink-2); max-width: 56ch; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.card h2 { font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: .02em; line-height: 1.15; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sub { font-size: 13px; color: var(--ink-2); }
+.cols { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
+@media (min-width: 880px) { .cols { grid-template-columns: 1fr 1fr; } .cols.wide-left { grid-template-columns: 1.1fr .9fr; } }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 18px; border-radius: 6px; border: 1.5px solid var(--ink); background: var(--surface); font-weight: 700; cursor: pointer; text-decoration: none; color: var(--ink); }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+.btn.ghost { border-color: var(--line); font-weight: 500; }
+.btn.sm { min-height: 40px; padding: 0 12px; font-size: 14px; }
+.btn.block { width: 100%; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-row > * { flex: 1 1 160px; }
+
+/* inputs */
+label.f { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 700; color: var(--ink-2); min-width: 0; }
+.in, textarea.in { min-height: 48px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); width: 100%; font-weight: 500; }
+textarea.in { min-height: 120px; resize: vertical; line-height: 1.55; }
+.in:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent); }
+.in.mono { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }
+.err { color: var(--crit); font-size: 13px; font-weight: 500; min-height: 20px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 420px) { .row2 { grid-template-columns: 1fr; } }
+
+/* chips */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid currentColor; white-space: nowrap; line-height: 1.7; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chip.crit { color: var(--crit); background: color-mix(in srgb, var(--crit) 12%, var(--surface)); }
+.chip.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--surface)); }
+.chip.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.chip.plain { color: var(--ink-2); background: transparent; }
+.chip.plain::before { display: none; }
+
+/* scan card */
+.scan-actions { display: grid; gap: 10px; }
+.divider { display: flex; align-items: center; gap: 12px; color: var(--ink-2); font-size: 12px; font-family: var(--font-mono); letter-spacing: .08em; }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.cam { position: relative; border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 4/3; max-width: 100%; }
+.cam video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.reticle { position: absolute; inset: 18% 18%; border: 2px solid var(--hl); border-radius: 10px; box-shadow: 0 0 0 999px rgba(0,0,0,.35); pointer-events: none; }
+.cam .btn { position: absolute; right: 10px; bottom: 10px; min-height: 40px; }
+
+/* equipment list */
+.eq-list { display: flex; flex-direction: column; }
+.eq-item { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 14px; align-items: center; padding: 14px 4px; border-top: 1px solid var(--line); text-decoration: none; color: inherit; min-height: 64px; }
+.eq-item:first-child { border-top: 0; }
+.eq-item:hover { background: var(--bg); }
+.eq-id { font-family: var(--font-mono); font-weight: 600; font-size: 13px; color: var(--ink-2); }
+.eq-name { font-weight: 700; }
+.eq-meta { grid-column: 2; font-size: 13px; color: var(--ink-2); }
+.eq-item .chip { grid-row: 1 / span 2; grid-column: 3; }
+.eq-item .eq-id { grid-column: 1; grid-row: 1 / span 2; min-width: 84px; }
+
+/* status banner */
+.banner { border: 1px solid var(--crit); border-radius: 8px; overflow: hidden; background: color-mix(in srgb, var(--crit) 8%, var(--surface)); }
+.banner.warn { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 9%, var(--surface)); }
+.hazard { height: 8px; background: repeating-linear-gradient(-45deg, var(--hl) 0 10px, #1a1a1a 10px 20px); }
+.banner-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+.err-code { font-family: var(--font-display); font-weight: 700; font-size: 56px; line-height: 1; letter-spacing: .02em; color: var(--crit); }
+.banner.warn .err-code { color: var(--warn); }
+.err-title { font-weight: 700; font-size: 18px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 13px; }
+.kv dt { color: var(--ink-2); }
+.kv dd { margin: 0; font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+
+/* checklist */
+.progress { display: flex; align-items: center; gap: 12px; }
+.meter { flex: 1; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.meter > i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .25s; }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; counter-reset: s; }
+.step { position: relative; }
+.step input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }
+.step-box { display: grid; grid-template-columns: 44px 1fr 28px; gap: 12px; align-items: center; padding: 12px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--bg); min-height: 72px; }
+.step-ico { width: 44px; height: 44px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); display: grid; place-items: center; color: var(--accent); }
+.step-n { font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); font-weight: 600; letter-spacing: .06em; }
+.step-t { font-weight: 700; line-height: 1.35; }
+.step-d { font-size: 13px; color: var(--ink-2); }
+.tick { width: 26px; height: 26px; border-radius: 6px; border: 2px solid var(--ink-2); display: grid; place-items: center; color: transparent; }
+.tick .svg { width: 18px; height: 18px; stroke-width: 3; }
+.step input:checked + .step-box { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 9%, var(--surface)); }
+.step input:checked + .step-box .tick { background: var(--ok); border-color: var(--ok); color: #fff; }
+.step input:checked + .step-box .step-t { text-decoration: line-through; text-decoration-color: var(--ink-2); }
+.step input:focus-visible + .step-box { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* decision */
+.decide { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.big { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px; border-radius: 8px; border: 1.5px solid var(--ink); background: var(--surface); cursor: pointer; text-align: left; min-height: 84px; width: 100%; }
+.big:hover { background: var(--bg); }
+.big b { font-size: 17px; display: flex; align-items: center; gap: 10px; }
+.big span { font-size: 13px; color: var(--ink-2); }
+.big.pick { background: var(--ink); color: var(--bg); }
+.big.pick span { color: color-mix(in srgb, var(--bg) 75%, var(--ink)); }
+.big.fix b .svg { color: var(--ok); }
+.big.esc b .svg { color: var(--crit); }
+.big.pick b .svg { color: var(--hl); }
+
+/* resources */
+.res { display: flex; flex-direction: column; }
+.res-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 11px 0; border-top: 1px solid var(--line); align-items: center; }
+.res-row:first-child { border-top: 0; }
+.res-name { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.res-code { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+.loc { font-family: var(--font-mono); font-weight: 600; font-size: 14px; background: var(--hl); color: var(--hl-ink); padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.res-end { display: flex; align-items: center; gap: 8px; grid-row: 1 / span 2; grid-column: 2; flex-wrap: wrap; justify-content: flex-end; }
+.map { display: grid; gap: 4px; }
+.map-row { display: grid; grid-template-columns: 22px repeat(8, 1fr); gap: 4px; align-items: center; }
+.map-lab { font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); text-align: center; }
+.cell { height: 28px; border-radius: 3px; background: var(--surface-2); border: 1px solid var(--line); }
+.cell.on { background: var(--hl); border-color: #8a6d00; }
+.lockers { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+.lk { height: 38px; border-radius: 3px; background: var(--surface-2); border: 1px solid var(--line); display: grid; place-items: center; font-family: var(--font-mono); font-size: 10px; color: var(--ink-2); }
+.lk.on { background: var(--hl); border-color: #8a6d00; color: var(--hl-ink); font-weight: 600; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); align-items: center; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; background: var(--hl); border: 1px solid #8a6d00; margin-right: 6px; vertical-align: -1px; }
+.sub-h { font-size: 12px; font-family: var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); font-weight: 600; }
+
+/* contact */
+.contact { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1.5px solid var(--ink); border-radius: 8px; }
+.who { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
+.num { font-family: var(--font-mono); font-size: 22px; font-weight: 600; letter-spacing: .02em; user-select: all; }
+.note { font-size: 12.5px; color: var(--ink-2); }
+
+/* seg */
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.seg label { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: flex; align-items: center; justify-content: center; min-height: 48px; border: 1.5px solid var(--line); border-radius: 6px; font-weight: 700; background: var(--bg); text-align: center; padding: 0 8px; }
+.seg input:checked + span { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.seg input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* history */
+.log { display: flex; flex-direction: column; }
+.log-item { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+.log-item:first-child { border-top: 0; }
+.log-memo { grid-column: 1 / -1; font-size: 13.5px; color: var(--ink-2); overflow-wrap: anywhere; }
+.empty { padding: 24px 8px; text-align: center; color: var(--ink-2); }
+
+/* QR */
+.qr-label { background: #fff; color: #111; border: 2px solid #111; border-radius: 6px; padding: 18px; display: grid; gap: 14px; justify-items: center; width: min(100%, 340px); margin-inline: auto; }
+.qr-label .hz { height: 8px; width: 100%; background: repeating-linear-gradient(-45deg, #ffcf33 0 10px, #1a1a1a 10px 20px); }
+.qr-label svg { width: 100%; max-width: 260px; height: auto; display: block; }
+.qr-label .qid { font-family: var(--font-display); font-weight: 700; font-size: 34px; letter-spacing: .04em; line-height: 1; }
+.qr-label .qname { font-size: 14px; font-weight: 700; text-align: center; }
+.qr-label .qhint { font-size: 11px; color: #444; text-align: center; font-family: var(--font-mono); letter-spacing: .04em; }
+.urlbox { font-family: var(--font-mono); font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; overflow-wrap: anywhere; user-select: all; }
+.quick { display: flex; gap: 8px; flex-wrap: wrap; }
+.quick button { min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.quick button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* roadmap */
+.road { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 720px) { .road { grid-template-columns: repeat(3, 1fr); } }
+.road div { border: 1px dashed var(--line); border-radius: 8px; padding: 12px 14px; font-size: 13px; color: var(--ink-2); }
+.road b { display: block; color: var(--ink); font-size: 14px; }
+
+/* tab bar */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.tabs .in-tabs { max-width: 1040px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); }
+.tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 60px; font-size: 12px; font-weight: 700; text-decoration: none; color: var(--ink-2); }
+.tab[aria-current="page"] { color: var(--ink); box-shadow: inset 0 3px 0 var(--accent); }
+.tab[aria-current="page"] .svg { color: var(--accent); }
+
+.toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 8px; font-weight: 700; font-size: 14px; z-index: 40; max-width: calc(100% - 32px); text-align: center; }
+.foot { font-size: 12px; color: var(--ink-2); padding-bottom: 8px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="top">
+  <div class="bar gut">
+    <a class="brand" href="#home" aria-label="홈">
+      <span class="brand-mark"><svg class="svg" viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16"/></svg></span>
+      <span>FIELD·FIX</span>
+    </a>
+    <span class="grow"></span>
+    <span id="crumb"></span>
+  </div>
+</header>
+
+<main id="app" class="gut" aria-live="polite"></main>
+
+<nav class="tabs" aria-label="주요 메뉴">
+  <div class="in-tabs gut">
+    <a class="tab" id="tab-home" href="#home"><svg class="svg" viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16"/></svg>스캔</a>
+    <a class="tab" id="tab-history" href="#history"><svg class="svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>조치 이력</a>
+    <a class="tab" id="tab-qr" href="#qr"><svg class="svg" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h3v3h-3zM20 14v6h-3"/></svg>QR 생성</a>
+  </div>
+</nav>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+(function () {
+'use strict';
+
+/* ---------- icons ---------- */
+var ICON = {
+  valve: '<path d="M7 7v10l10-10v10z"/><path d="M12 12V4M9 4h6M3 12h2M19 12h2"/>',
+  bolt: '<path d="M12 3l7 4v8l-7 4-7-4V7z"/><circle cx="12" cy="11" r="3"/>',
+  power: '<path d="M12 3v8"/><path d="M6.5 6.5a8 8 0 1 0 11 0"/>',
+  gauge: '<path d="M4 17a8 8 0 1 1 16 0z"/><path d="M12 17l4-6"/>',
+  filter: '<path d="M4 5h16l-6 7v6l-4 2v-8z"/>',
+  wrench: '<circle cx="7" cy="17" r="2.6"/><path d="M9 15l9-9M15 4l5 5"/>',
+  belt: '<rect x="3" y="8" width="18" height="8" rx="4"/><circle cx="8" cy="12" r="1.4"/><circle cx="16" cy="12" r="1.4"/>',
+  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
+  msg: '<path d="M4 5h16v11H9l-5 4z"/>',
+  check: '<path d="M5 12l5 5 9-10"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+  scan: '<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/>',
+  back: '<path d="M15 5l-7 7 7 7"/>',
+  go: '<path d="M9 5l7 7-7 7"/>',
+  cart: '<path d="M3 4h2l2 11h11l2-8H6"/><circle cx="9" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/>'
+};
+function ico(n) { return '<svg class="svg" viewBox="0 0 24 24" aria-hidden="true">' + ICON[n] + '</svg>'; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+/* ---------- sample data (프로토타입용 샘플. 운영 시 Google Sheets 연동으로 교체) ---------- */
+var EQ = [
+  { id: 'PMP-0231', name: '냉각수 순환펌프 #2', place: 'B동 펌프실 · 라인 2', model: 'CWP-250', sev: 'crit',
+    code: 'E-214', title: '냉각수 압력 저하', since: '14:32 발생',
+    steps: [
+      { i: 'power', t: '펌프 정지 및 잠금 태그 부착', d: '조작반 정지 버튼을 누르고 전원 차단기에 LOTO 태그를 건다.' },
+      { i: 'valve', t: '밸브 A 차단', d: '토출 측 밸브 A를 시계 방향으로 끝까지 닫는다.' },
+      { i: 'gauge', t: '흡입 압력계 확인', d: '0.15MPa 미만이면 스트레이너 막힘으로 판단한다.' },
+      { i: 'bolt', t: '3번 볼트 해제', d: '스트레이너 커버의 3번 볼트(M10)를 17mm 소켓으로 푼다.' },
+      { i: 'filter', t: '스트레이너 청소 후 재조립', d: '이물 제거 후 35N·m로 체결하고 밸브 A를 연다.' }
+    ],
+    parts: [ { n: '스트레이너 메시', c: 'CWP-S250', q: 4, r: 'A-03-2' }, { n: '메커니컬 씰', c: 'MS-250', q: 0, r: 'A-05-1' }, { n: '가스켓 세트', c: 'GK-250', q: 12, r: 'B-02-4' } ],
+    tools: [ { n: '토크렌치 10–60N·m', l: 7 }, { n: '17mm 소켓 세트', l: 7 }, { n: '이물 흡입기', l: 11 } ],
+    eng: { n: '박정우 책임', r: '설비보전팀', p: '010-1234-5678' } },
+  { id: 'CNV-0107', name: '컨베이어 구동 모터', place: 'A동 포장 구간 · 라인 1', model: 'CM-7.5K', sev: 'warn',
+    code: 'E-103', title: '모터 과부하 (벨트 장력 이상)', since: '15:08 발생',
+    steps: [
+      { i: 'power', t: '비상정지 후 전원 차단', d: '비상정지 버튼을 누르고 모터 차단기를 내린다.' },
+      { i: 'eye', t: '벨트 이탈·이물 점검', d: '벨트 가장자리 마모와 롤러 사이 이물을 눈으로 확인한다.' },
+      { i: 'belt', t: '벨트 장력 측정', d: '중앙부를 눌러 처짐이 15mm를 넘으면 장력 부족이다.' },
+      { i: 'bolt', t: '장력 조정 볼트 조임', d: '좌우 장력 볼트를 같은 회전수로 반 바퀴씩 조인다.' },
+      { i: 'gauge', t: '시운전 후 전류 확인', d: '무부하 운전 3분, 정격 전류의 80% 이하인지 본다.' }
+    ],
+    parts: [ { n: '컨베이어 벨트', c: 'CB-1200', q: 2, r: 'C-01-3' }, { n: '베어링 6208', c: 'BR-6208', q: 8, r: 'C-04-2' }, { n: '모터 커플링', c: 'CP-30', q: 0, r: 'C-06-1' } ],
+    tools: [ { n: '벨트 장력 게이지', l: 3 }, { n: '육각렌치 세트', l: 3 } ],
+    eng: { n: '이서연 대리', r: '설비보전팀', p: '010-2345-6789' } },
+  { id: 'CMP-0042', name: '에어 컴프레서 #1', place: '유틸리티실', model: 'AC-55', sev: 'warn',
+    code: 'E-305', title: '오일 온도 상승', since: '13:47 발생',
+    steps: [
+      { i: 'power', t: '부하 운전 정지', d: '언로드 상태로 전환하고 5분간 공회전시킨다.' },
+      { i: 'eye', t: '오일 레벨 확인', d: '게이지 중간선 아래면 오일을 보충한다.' },
+      { i: 'filter', t: '쿨러 핀 막힘 확인', d: '쿨러 표면 먼지를 에어 건으로 불어낸다.' },
+      { i: 'wrench', t: '오일 필터 점검', d: '필터 차압 표시가 적색이면 교체한다.' },
+      { i: 'gauge', t: '재가동 후 온도 확인', d: '10분 뒤 오일 온도가 90℃ 이하인지 본다.' }
+    ],
+    parts: [ { n: '오일 필터', c: 'OF-55', q: 6, r: 'D-02-1' }, { n: '컴프레서 오일 20L', c: 'OIL-20', q: 3, r: 'D-04-4' }, { n: '서모스탯', c: 'TS-80', q: 1, r: 'D-01-2' } ],
+    tools: [ { n: '오일 필터 렌치', l: 9 }, { n: '에어 건', l: 9 } ],
+    eng: { n: '최민호 선임', r: '유틸리티팀', p: '010-3456-7890' } },
+  { id: 'ROB-0815', name: '용접 로봇 셀 3', place: 'C동 차체 라인', model: 'WR-6', sev: 'warn',
+    code: 'E-411', title: '와이어 송급 이상', since: '15:21 발생',
+    steps: [
+      { i: 'power', t: '로봇 티치펜던트 정지', d: '자동 모드를 해제하고 안전 펜스 인터록을 확인한다.' },
+      { i: 'eye', t: '와이어 걸림 확인', d: '피더 롤러와 라이너 입구에서 와이어 꼬임을 찾는다.' },
+      { i: 'wrench', t: '컨택트 팁 점검', d: '팁 구멍이 늘어났거나 막혔으면 교체한다.' },
+      { i: 'bolt', t: '피더 압력 조정', d: '가압 노브를 2~3 눈금 범위로 맞춘다.' },
+      { i: 'gauge', t: '시험 송급 5초', d: '와이어가 막힘 없이 나오는지 확인한다.' }
+    ],
+    parts: [ { n: '컨택트 팁 1.2mm', c: 'CT-12', q: 40, r: 'A-06-1' }, { n: '피더 롤러', c: 'FR-06', q: 3, r: 'A-07-3' }, { n: '와이어 라이너', c: 'LN-35', q: 0, r: 'A-07-5' } ],
+    tools: [ { n: '팁 렌치', l: 2 }, { n: '와이어 커터', l: 2 } ],
+    eng: { n: '정하늘 사원', r: '로봇운영팀', p: '010-4567-8901' } },
+  { id: 'PRS-0066', name: '유압 프레스', place: 'B동 프레스장', model: 'HP-300T', sev: 'crit',
+    code: 'E-520', title: '유압 라인 압력 이상', since: '14:55 발생',
+    steps: [
+      { i: 'power', t: '프레스 정지 및 슬라이드 하강 잠금', d: '안전 블록을 끼우고 전원을 차단한다.' },
+      { i: 'gauge', t: '유압 게이지 확인', d: '정상 범위 18~21MPa를 벗어났는지 확인한다.' },
+      { i: 'eye', t: '호스·연결부 누유 점검', d: '피팅과 호스 표면의 유막, 방울을 찾는다.' },
+      { i: 'valve', t: '릴리프 밸브 상태 확인', d: '설정 압력 표식이 밀리지 않았는지 본다.' },
+      { i: 'filter', t: '리턴 필터 막힘 점검', d: '차압 지시계가 적색이면 교체 대상이다.' }
+    ],
+    parts: [ { n: '유압 호스 1/2"', c: 'HH-12', q: 2, r: 'B-05-2' }, { n: '유압유 ISO VG46 20L', c: 'HY-46', q: 5, r: 'B-06-1' }, { n: '압력 스위치', c: 'PS-25', q: 1, r: 'B-03-4' } ],
+    tools: [ { n: '호스 클램프 플라이어', l: 5 }, { n: '누유 처리 키트', l: 12 } ],
+    eng: { n: '한지민 책임', r: '설비보전팀', p: '010-5678-9012' } }
+];
+function find(id) { id = String(id || '').trim().toLowerCase(); for (var i = 0; i < EQ.length; i++) if (EQ[i].id.toLowerCase() === id) return EQ[i]; return null; }
+
+/* ---------- state & storage ---------- */
+var KEY = 'fieldfix-log-v1';
+var userLog = [];
+try { userLog = JSON.parse(localStorage.getItem(KEY) || '[]') || []; } catch (e) { userLog = []; }
+function saveLog() { try { localStorage.setItem(KEY, JSON.stringify(userLog.slice(0, 200))); } catch (e) {} }
+var now = Date.now();
+var SAMPLE = [
+  { t: now - 2 * 3600e3, id: 'CMP-0042', code: 'E-305', kind: 'done', who: '최민호', min: 25, memo: '쿨러 핀 청소 후 오일 온도 정상 확인.', sample: true },
+  { t: now - 26 * 3600e3, id: 'PMP-0231', code: 'E-214', kind: 'outsource', who: '김현장', min: 10, memo: '메커니컬 씰 누수. 재고 없음, 담당자 호출.', sample: true },
+  { t: now - 50 * 3600e3, id: 'CNV-0107', code: 'E-103', kind: 'done', who: '이서연', min: 40, memo: '장력 볼트 재조정. 전류 정상.', sample: true }
+];
+var checked = {};      // id -> {index:true}
+var decision = {};     // id -> 'fix' | 'esc' | 'done'
+var qrId = 'PMP-0231';
+
+/* ---------- helpers ---------- */
+var $app = document.getElementById('app');
+var toastTimer;
+function toast(msg) {
+  var t = document.getElementById('toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 3200);
+}
+function copy(text, done) {
+  function fallback() {
+    var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove(); done(ok);
+  }
+  try { navigator.clipboard.writeText(text).then(function () { done(true); }, fallback); } catch (e) { fallback(); }
+}
+function fmt(ts) {
+  try { return new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ts)); }
+  catch (e) { return new Date(ts).toLocaleString(); }
+}
+function sevChip(s) { return s === 'crit' ? '<span class="chip crit">긴급</span>' : '<span class="chip warn">주의</span>'; }
+function kindChip(k) { return k === 'done' ? '<span class="chip ok">조치 완료</span>' : '<span class="chip warn">외주 요청</span>'; }
+function setNav(name) {
+  ['home', 'history', 'qr'].forEach(function (n) {
+    var el = document.getElementById('tab-' + n);
+    if (n === name) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
+  });
+}
+
+/* ---------- views ---------- */
+function viewHome() {
+  setNav('home');
+  document.getElementById('crumb').innerHTML = '';
+  var list = EQ.map(function (e) {
+    return '<a class="eq-item" href="#' + e.id.toLowerCase() + '"><span class="eq-id">' + e.id + '</span><span class="eq-name">' + esc(e.name) +
+      '</span><span class="eq-meta">' + esc(e.code) + ' · ' + esc(e.title) + '</span>' + sevChip(e.sev) + '</a>';
+  }).join('');
+  $app.innerHTML =
+    '<div><div class="eyebrow">현장 설비 · 유지보수 · 자원 조회</div><h1 class="h-page">설비에 붙은 QR을<br>스캔하세요</h1>' +
+    '<p class="lead" style="margin-top:10px">에러 코드와 조치 순서를 바로 확인하고, 현장에서 해결하기 어려우면 부품 위치와 담당자 연락처까지 한 화면에서 이어집니다.</p></div>' +
+    '<div class="cols">' +
+      '<section class="card" aria-labelledby="h-scan"><h2 id="h-scan">QR 스캔</h2>' +
+        '<div class="scan-actions">' +
+          '<button class="btn primary block" id="btn-cam" type="button">' + ico('scan') + '카메라로 스캔</button>' +
+          '<div class="cam" id="cam" hidden><video id="vid" playsinline muted></video><div class="reticle"></div><button class="btn sm" id="btn-cam-stop" type="button">닫기</button></div>' +
+          '<label class="btn block" for="file-qr" style="cursor:pointer">' + ico('image') + 'QR 사진 촬영 · 선택</label>' +
+          '<input id="file-qr" type="file" accept="image/*" capture="environment" hidden>' +
+          '<div class="err" id="scan-err" role="alert"></div>' +
+        '</div>' +
+        '<div class="divider">QR이 훼손됐다면</div>' +
+        '<form id="serial-form" class="scan-actions" novalidate>' +
+          '<label class="f" for="serial">설비 시리얼 번호' +
+            '<input class="in mono" id="serial" list="serials" placeholder="예: PMP-0231" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20"></label>' +
+          '<datalist id="serials">' + EQ.map(function (e) { return '<option value="' + e.id + '">' + esc(e.name) + '</option>'; }).join('') + '</datalist>' +
+          '<div class="err" id="serial-err" role="alert"></div>' +
+          '<button class="btn block" type="submit">직접 조회' + ico('go') + '</button>' +
+        '</form>' +
+      '</section>' +
+      '<section class="card" aria-labelledby="h-list"><div class="card-head"><h2 id="h-list">에러 발생 설비</h2><span class="sub">시연용 샘플 5대</span></div>' +
+        '<div class="eq-list">' + list + '</div></section>' +
+    '</div>' +
+    '<section class="card" aria-labelledby="h-road"><div class="card-head"><h2 id="h-road">다음 단계 (Phase 2)</h2><span class="sub">MVP 이후 고도화 과제</span></div>' +
+      '<div class="road"><div><b>오프라인 캐싱</b>음영 지역에서도 최근 이력과 매뉴얼을 볼 수 있게 로컬에 저장합니다.</div>' +
+      '<div><b>AR 시각화 가이드</b>부품 교체 순서와 볼트 위치를 카메라 화면 위에 겹쳐 보여 줍니다.</div>' +
+      '<div><b>푸시 알림 · 화상 지원</b>원격 엔지니어와 실시간으로 화면을 공유합니다.</div></div></section>' +
+    '<p class="foot">장비, 재고, 연락처는 시연용 샘플 데이터입니다. 조치 내역은 이 브라우저에만 저장됩니다.</p>';
+}
+
+function viewEq(e) {
+  setNav('home');
+  document.getElementById('crumb').innerHTML = '<a class="crumb" href="#home">' + ico('back') + '다시 스캔</a>';
+  var done = checked[e.id] || {};
+  var steps = e.steps.map(function (s, i) {
+    return '<li class="step"><input type="checkbox" id="st-' + i + '" data-step="' + i + '"' + (done[i] ? ' checked' : '') + '>' +
+      '<div class="step-box"><div class="step-ico">' + ico(s.i) + '</div><div><div class="step-n">STEP ' + (i + 1) + '</div><div class="step-t">' + esc(s.t) +
+      '</div><div class="step-d">' + esc(s.d) + '</div></div><div class="tick">' + ico('check') + '</div></div></li>';
+  }).join('');
+  $app.innerHTML =
+    '<div class="banner ' + (e.sev === 'crit' ? '' : 'warn') + '"><div class="hazard"></div><div class="banner-body">' +
+      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' + sevChip(e.sev) + '<span class="eq-id">' + e.id + '</span></div>' +
+      '<div class="err-code">' + esc(e.code) + '</div><div class="err-title">' + esc(e.title) + '</div>' +
+      '<dl class="kv"><dt>설비</dt><dd>' + esc(e.name) + '</dd><dt>위치</dt><dd>' + esc(e.place) + '</dd><dt>모델</dt><dd class="mono">' + esc(e.model) + '</dd><dt>상태</dt><dd>' + esc(e.since) + '</dd></dl>' +
+    '</div></div>' +
+    '<div class="cols wide-left">' +
+      '<section class="card" aria-labelledby="h-chk"><div class="card-head"><h2 id="h-chk">1 · 조치 체크리스트</h2><span class="sub">순서대로 확인하세요</span></div>' +
+        '<div class="progress"><div class="meter"><i id="meter"></i></div><span class="sub tnum" id="prog"></span></div>' +
+        '<ol class="steps">' + steps + '</ol></section>' +
+      '<div id="zone" style="display:flex;flex-direction:column;gap:20px;min-width:0"></div>' +
+    '</div>';
+  updateProgress(e);
+  renderZone(e);
+}
+function updateProgress(e) {
+  var n = Object.keys(checked[e.id] || {}).filter(function (k) { return checked[e.id][k]; }).length;
+  var p = document.getElementById('prog'), m = document.getElementById('meter');
+  if (p) p.textContent = n + ' / ' + e.steps.length + ' 완료';
+  if (m) m.style.width = (n / e.steps.length * 100) + '%';
+}
+
+function mapHtml(e) {
+  var racks = {}; e.parts.forEach(function (p) { var m = p.r.split('-'); racks[m[0] + m[1]] = true; });
+  var rows = ['A', 'B', 'C', 'D'].map(function (z) {
+    var cells = ''; for (var b = 1; b <= 8; b++) { var k = z + (b < 10 ? '0' + b : b); cells += '<div class="cell' + (racks[k] ? ' on' : '') + '" title="' + z + '-' + (b < 10 ? '0' + b : b) + '"></div>'; }
+    return '<div class="map-row"><span class="map-lab">' + z + '</span>' + cells + '</div>';
+  }).join('');
+  var nums = '<div class="map-row"><span></span>' + [1,2,3,4,5,6,7,8].map(function (n) { return '<span class="map-lab">0' + n + '</span>'; }).join('') + '</div>';
+  var lk = {}; e.tools.forEach(function (t) { lk[t.l] = true; });
+  var lockers = ''; for (var i = 1; i <= 12; i++) lockers += '<div class="lk' + (lk[i] ? ' on' : '') + '">' + (i < 10 ? '0' + i : i) + '</div>';
+  return '<div class="sub-h">창고 랙 배치 (구역-칸-단)</div><div class="map">' + nums + rows + '</div>' +
+    '<div class="sub-h" style="margin-top:6px">공구 락커</div><div class="lockers">' + lockers + '</div>' +
+    '<div class="legend"><span><i></i>필요한 부품 · 공구 위치</span></div>';
+}
+
+function smsText(e) {
+  var n = Object.keys(checked[e.id] || {}).filter(function (k) { return checked[e.id][k]; }).length;
+  var need = e.parts.map(function (p) { return p.n + '(' + p.r + ')'; }).join(', ');
+  return '[설비 지원 요청]\n장비ID: ' + e.id + ' (' + e.name + ')\n에러코드: ' + e.code + ' ' + e.title + '\n위치: ' + e.place +
+    '\n조치 진행: ' + n + '/' + e.steps.length + '단계\n필요 부품: ' + need + '\n현장 조치가 어려워 지원 부탁드립니다.';
+}
+
+function renderZone(e) {
+  var z = document.getElementById('zone'); if (!z) return;
+  var d = decision[e.id];
+  var html = '<section class="card" aria-labelledby="h-dec"><h2 id="h-dec">2 · 현장에서 해결할 수 있나요?</h2><div class="decide">' +
+    '<button type="button" class="big fix' + (d === 'fix' ? ' pick' : '') + '" data-decide="fix"><b>' + ico('check') + '현장 조치 가능</b><span>조치 완료 내용을 기록합니다.</span></button>' +
+    '<button type="button" class="big esc' + (d === 'esc' ? ' pick' : '') + '" data-decide="esc"><b>' + ico('phone') + '현장 조치 불가</b><span>필요한 부품·공구 위치를 보고 담당자에게 연락합니다.</span></button></div></section>';
+
+  if (d === 'esc') {
+    var parts = e.parts.map(function (p) {
+      return '<div class="res-row"><div><div class="res-name">' + esc(p.n) + '</div><div class="res-code">' + esc(p.c) + '</div></div>' +
+        '<div class="res-end">' + (p.q > 0 ? '<span class="chip ok tnum">재고 ' + p.q + '</span>' : '<span class="chip crit">재고 없음</span>') + '<span class="loc">' + p.r + '</span></div></div>';
+    }).join('');
+    var tools = e.tools.map(function (t) {
+      return '<div class="res-row"><div class="res-name">' + esc(t.n) + '</div><div class="res-end"><span class="loc">락커 ' + (t.l < 10 ? '0' + t.l : t.l) + '</span></div></div>';
+    }).join('');
+    var soldout = e.parts.some(function (p) { return p.q === 0; });
+    html += '<section class="card" aria-labelledby="h-res"><h2 id="h-res">3 · 필요한 부품과 공구</h2>' +
+      '<div class="sub-h">교체 부품</div><div class="res">' + parts + '</div>' +
+      (soldout ? '<p class="note">재고가 없는 부품은 담당자에게 긴급 발주를 요청하세요.</p>' : '') +
+      '<div class="sub-h">수리 공구</div><div class="res">' + tools + '</div>' + mapHtml(e) + '</section>' +
+      '<section class="card" aria-labelledby="h-call"><h2 id="h-call">4 · 담당자 연결</h2><div class="contact">' +
+        '<div class="who"><div><div style="font-weight:700">' + esc(e.eng.n) + '</div><div class="sub">' + esc(e.eng.r) + '</div></div>' +
+        '<div class="num" id="phone-num">' + e.eng.p + '</div></div>' +
+        '<div class="btn-row"><a class="btn primary" href="tel:' + e.eng.p.replace(/-/g, '') + '">' + ico('phone') + '전화 연결</a>' +
+        '<button class="btn" type="button" data-copy="' + e.eng.p + '">' + ico('copy') + '번호 복사</button></div></div>' +
+        '<label class="f" for="sms-body">문자 문구 (자동 작성, 수정 가능)<textarea class="in" id="sms-body" rows="7">' + esc(smsText(e)) + '</textarea></label>' +
+        '<div class="btn-row"><a class="btn" id="sms-link" href="sms:' + e.eng.p.replace(/-/g, '') + '?&body=' + encodeURIComponent(smsText(e)) + '">' + ico('msg') + '문자 앱 열기</a>' +
+        '<button class="btn" type="button" id="sms-copy">' + ico('copy') + '문구 복사</button></div>' +
+        '<p class="note">전화·문자 앱은 기기와 브라우저에 따라 열리지 않을 수 있습니다. 그럴 때는 번호와 문구를 복사해서 사용하세요.</p></section>';
+  }
+  if (d === 'fix' || d === 'esc') {
+    var isEsc = d === 'esc';
+    html += '<section class="card" aria-labelledby="h-form"><h2 id="h-form">' + (isEsc ? '5' : '3') + ' · ' + (isEsc ? '외주 요청 기록' : '조치 완료 기록') + '</h2>' +
+      '<form id="log-form" novalidate style="display:flex;flex-direction:column;gap:14px">' +
+      '<div class="seg" role="radiogroup" aria-label="처리 구분"><label><input type="radio" name="kind" value="done"' + (isEsc ? '' : ' checked') + '><span>조치 완료</span></label>' +
+      '<label><input type="radio" name="kind" value="outsource"' + (isEsc ? ' checked' : '') + '><span>외주 요청</span></label></div>' +
+      '<div class="row2"><label class="f" for="who">작업자 이름<input class="in" id="who" name="who" autocomplete="name" maxlength="20" placeholder="예: 김현장"></label>' +
+      '<label class="f" for="min">소요 시간(분)<input class="in tnum" id="min" name="min" type="number" inputmode="numeric" min="0" max="999" placeholder="예: 25"></label></div>' +
+      '<label class="f" for="memo">조치 내용 · 메모<textarea class="in" id="memo" name="memo" maxlength="400" placeholder="' + (isEsc ? '예: 메커니컬 씰 누수. 부품 재고 없음.' : '예: 스트레이너 청소 후 압력 정상 확인.') + '"></textarea></label>' +
+      '<div class="err" id="form-err" role="alert"></div>' +
+      '<button class="btn primary block" type="submit">' + ico('check') + '기록 제출</button></form></section>';
+  }
+  if (d === 'done') {
+    html = '<section class="card"><h2>기록이 저장되었습니다</h2><p class="lead">' + e.id + ' · ' + esc(e.code) + ' 조치 내역이 이력에 추가되었습니다.</p>' +
+      '<div class="btn-row"><a class="btn primary" href="#history">조치 이력 보기</a><a class="btn" href="#home">다른 설비 스캔</a></div></section>';
+  }
+  z.innerHTML = html;
+}
+
+function viewHistory() {
+  setNav('history');
+  document.getElementById('crumb').innerHTML = '';
+  var all = userLog.concat(SAMPLE).sort(function (a, b) { return b.t - a.t; });
+  var items = all.map(function (l) {
+    var e = find(l.id);
+    return '<div class="log-item"><div><div class="res-name"><span class="mono">' + esc(l.id) + '</span> ' + esc(e ? e.name : '') + '</div>' +
+      '<div class="sub">' + esc(l.code) + ' · ' + fmt(l.t) + ' · ' + esc(l.who || '-') + (l.min ? ' · ' + esc(l.min) + '분' : '') + (l.sample ? ' · 샘플' : '') + '</div></div>' + kindChip(l.kind) +
+      (l.memo ? '<div class="log-memo">' + esc(l.memo) + '</div>' : '') + '</div>';
+  }).join('');
+  $app.innerHTML = '<div><div class="eyebrow">제출된 기록</div><h1 class="h-page">조치 이력</h1><p class="lead" style="margin-top:10px">조치 완료와 외주 요청이 시간순으로 쌓입니다. 이 화면의 기록은 현재 브라우저에만 저장됩니다.</p></div>' +
+    '<section class="card"><div class="log">' + items + '</div></section>';
+}
+
+function qrSvg(text) {
+  var qr = qrcode(0, 'M'); qr.addData(text); qr.make();
+  var n = qr.getModuleCount(), m = 2, d = '';
+  for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (qr.isDark(r, c)) d += 'M' + (c + m) + ' ' + (r + m) + 'h1v1h-1z';
+  var s = n + m * 2;
+  return '<svg viewBox="0 0 ' + s + ' ' + s + '" shape-rendering="crispEdges" role="img" aria-label="QR 코드"><rect width="' + s + '" height="' + s + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+}
+var baseUrl = 'https://kevin9480.github.io/HINT/';
+function qrUrl(id) { return baseUrl.split('#')[0] + '#' + id.toLowerCase(); }
+
+function viewQr() {
+  setNav('qr');
+  document.getElementById('crumb').innerHTML = '';
+  $app.innerHTML = '<div><div class="eyebrow">시연 · 운영</div><h1 class="h-page">설비 QR 생성</h1><p class="lead" style="margin-top:10px">설비 ID를 입력하면 QR이 바로 만들어집니다. 스캔하면 이 앱의 해당 설비 화면이 열립니다.</p></div>' +
+    '<div class="cols"><section class="card" aria-labelledby="h-qin"><h2 id="h-qin">설비 ID</h2>' +
+      '<label class="f" for="qr-id">장비 ID (영문, 숫자, 하이픈)<input class="in mono" id="qr-id" value="' + esc(qrId) + '" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>' +
+      '<div class="err" id="qr-err" role="alert"></div>' +
+      '<div class="sub-h">등록된 설비</div><div class="quick" id="quick">' + EQ.map(function (e) { return '<button type="button" data-qid="' + e.id + '" aria-pressed="' + (e.id === qrId) + '">' + e.id + '</button>'; }).join('') + '</div>' +
+      '<label class="f" for="qr-base">앱 주소 (QR이 열 페이지)<input class="in" id="qr-base" value="' + esc(baseUrl) + '" autocomplete="off" spellcheck="false" style="text-transform:none;font-size:13px"></label>' +
+      '<div class="sub-h">QR에 담기는 주소</div><div class="urlbox" id="qr-url"></div>' +
+      '<div class="btn-row"><button class="btn" type="button" id="qr-copy">' + ico('copy') + '주소 복사</button><a class="btn" id="qr-open" href="#">' + ico('go') + '설비 화면 열기</a></div>' +
+      '<p class="note">게시된 링크는 공유 설정을 한 사람만 열 수 있습니다. 시연 휴대폰에서 같은 계정으로 로그인하거나 공유를 켜 두세요. 직접 호스팅하면 위 주소를 실제 서비스 주소로 바꾸면 됩니다.</p></section>' +
+    '<section class="card" aria-labelledby="h-qout"><h2 id="h-qout">부착용 라벨 미리보기</h2><div id="qr-out"></div></section></div>';
+  drawQr();
+}
+function drawQr() {
+  var v = (document.getElementById('qr-id').value || '').trim();
+  var err = document.getElementById('qr-err'), out = document.getElementById('qr-out');
+  if (!v) { err.textContent = '설비 ID를 입력하세요.'; out.innerHTML = '<p class="empty">ID를 입력하면 QR이 여기에 표시됩니다.</p>'; return; }
+  if (!/^[A-Za-z0-9-]{1,20}$/.test(v)) { err.textContent = '영문, 숫자, 하이픈만 사용할 수 있습니다.'; return; }
+  qrId = v.toUpperCase();
+  var e = find(qrId);
+  err.textContent = e ? '' : '등록되지 않은 ID입니다. 스캔하면 홈 화면으로 이동합니다.';
+  var url = qrUrl(qrId);
+  document.getElementById('qr-url').textContent = url;
+  document.getElementById('qr-open').setAttribute('href', '#' + qrId.toLowerCase());
+  out.innerHTML = '<div class="qr-label"><div class="hz"></div>' + qrSvg(url) + '<div class="qid">' + esc(qrId) + '</div>' +
+    '<div class="qname">' + esc(e ? e.name : '신규 설비') + '</div><div class="qhint">SCAN FOR ERROR GUIDE</div><div class="hz"></div></div>';
+  Array.prototype.forEach.call(document.querySelectorAll('#quick button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-qid') === qrId)); });
+}
+
+/* ---------- router ---------- */
+function route() {
+  stopCam();
+  var h = decodeURIComponent(location.hash.replace(/^#/, '')).toLowerCase();
+  if (h === 'history') viewHistory();
+  else if (h === 'qr') viewQr();
+  else if (h && h !== 'home' && find(h)) viewEq(find(h));
+  else { viewHome(); if (h && h !== 'home') { var s = document.getElementById('serial-err'); if (s) s.textContent = '등록되지 않은 설비입니다: ' + h.toUpperCase(); } }
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+
+/* ---------- scanning ---------- */
+var stream = null, raf = 0;
+function stopCam() {
+  cancelAnimationFrame(raf);
+  if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+  var c = document.getElementById('cam'); if (c) c.hidden = true;
+}
+function handleDecoded(text) {
+  var raw = String(text || '').trim(), id = raw.indexOf('#') >= 0 ? raw.split('#').pop() : raw;
+  if (find(id)) { location.hash = '#' + id.toLowerCase(); return true; }
+  var err = document.getElementById('scan-err');
+  if (err) err.textContent = '등록되지 않은 QR입니다. 설비 시리얼 번호를 직접 입력해 보세요.';
+  return false;
+}
+function startCam() {
+  var err = document.getElementById('scan-err'); err.textContent = '';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { err.textContent = '이 브라우저에서는 카메라를 열 수 없습니다. 아래 사진 촬영 버튼을 사용하세요.'; return; }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(function (s) {
+    stream = s;
+    var v = document.getElementById('vid'); v.srcObject = s; v.play();
+    document.getElementById('cam').hidden = false;
+    var cv = document.createElement('canvas'), ctx = cv.getContext('2d', { willReadFrequently: true });
+    (function tick() {
+      if (!stream) return;
+      if (v.readyState >= 2 && v.videoWidth) {
+        var w = 640, h = Math.round(640 * v.videoHeight / v.videoWidth); cv.width = w; cv.height = h;
+        ctx.drawImage(v, 0, 0, w, h);
+        var r = window.jsQR && jsQR(ctx.getImageData(0, 0, w, h).data, w, h);
+        if (r && r.data) { if (handleDecoded(r.data)) { stopCam(); return; } }
+      }
+      raf = requestAnimationFrame(tick);
+    })();
+  }).catch(function () {
+    err.textContent = '카메라 권한이 없거나 이 화면에서는 사용할 수 없습니다. 아래 사진 촬영 버튼으로 QR을 읽을 수 있습니다.';
+  });
+}
+function scanFile(file) {
+  var err = document.getElementById('scan-err'); err.textContent = '';
+  if (!file) return;
+  var img = new Image(), url = URL.createObjectURL(file);
+  img.onload = function () {
+    var max = 1000, sc = Math.min(1, max / Math.max(img.width, img.height));
+    var cv = document.createElement('canvas'); cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
+    var ctx = cv.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(url);
+    var r = window.jsQR && jsQR(ctx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, { inversionAttempts: 'attemptBoth' });
+    if (r && r.data) handleDecoded(r.data); else err.textContent = 'QR을 찾지 못했습니다. QR이 화면에 크게 나오도록 다시 촬영하거나 시리얼 번호를 입력하세요.';
+  };
+  img.onerror = function () { err.textContent = '이미지를 읽지 못했습니다. 다른 사진을 선택하세요.'; };
+  img.src = url;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', function (ev) {
+  var t = ev.target.closest('button, a'); if (!t) return;
+  if (t.id === 'btn-cam') return startCam();
+  if (t.id === 'btn-cam-stop') return stopCam();
+  var h = location.hash.replace(/^#/, '').toLowerCase(), e = find(h);
+  if (t.hasAttribute('data-decide') && e) { decision[e.id] = t.getAttribute('data-decide'); renderZone(e); return; }
+  if (t.hasAttribute('data-copy')) { copy(t.getAttribute('data-copy'), function (ok) { toast(ok ? '복사했습니다' : '복사하지 못했습니다. 번호를 길게 눌러 선택하세요'); }); return; }
+  if (t.id === 'sms-copy') { copy(document.getElementById('sms-body').value, function (ok) { toast(ok ? '문구를 복사했습니다' : '복사하지 못했습니다. 문구를 직접 선택하세요'); }); return; }
+  if (t.id === 'qr-copy') { copy(document.getElementById('qr-url').textContent, function (ok) { toast(ok ? '주소를 복사했습니다' : '복사하지 못했습니다'); }); return; }
+  if (t.hasAttribute('data-qid')) { document.getElementById('qr-id').value = t.getAttribute('data-qid'); drawQr(); }
+});
+document.addEventListener('change', function (ev) {
+  var t = ev.target;
+  if (t.id === 'file-qr') { scanFile(t.files && t.files[0]); t.value = ''; return; }
+  if (t.hasAttribute && t.hasAttribute('data-step')) {
+    var e = find(location.hash.replace(/^#/, '')); if (!e) return;
+    checked[e.id] = checked[e.id] || {}; checked[e.id][t.getAttribute('data-step')] = t.checked; updateProgress(e);
+    var sb = document.getElementById('sms-body'), sl = document.getElementById('sms-link');
+    if (sb) { sb.value = smsText(e); sl.setAttribute('href', 'sms:' + e.eng.p.replace(/-/g, '') + '?&body=' + encodeURIComponent(sb.value)); }
+  }
+});
+document.addEventListener('input', function (ev) {
+  var t = ev.target;
+  if (t.id === 'qr-id') drawQr();
+  if (t.id === 'qr-base') { baseUrl = t.value.trim() || baseUrl; drawQr(); }
+  if (t.id === 'sms-body') { var e = find(location.hash.replace(/^#/, '')); if (e) document.getElementById('sms-link').setAttribute('href', 'sms:' + e.eng.p.replace(/-/g, '') + '?&body=' + encodeURIComponent(t.value)); }
+});
+document.addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var f = ev.target;
+  if (f.id === 'serial-form') {
+    var v = document.getElementById('serial').value.trim(), err = document.getElementById('serial-err');
+    if (!v) { err.textContent = '시리얼 번호를 입력하세요.'; return; }
+    if (!find(v)) { err.textContent = '등록된 설비가 없습니다. 예: PMP-0231, CNV-0107'; return; }
+    location.hash = '#' + v.toLowerCase();
+  }
+  if (f.id === 'log-form') {
+    var e = find(location.hash.replace(/^#/, '')); if (!e) return;
+    var who = f.who.value.trim(), err2 = document.getElementById('form-err');
+    if (!who) { err2.textContent = '작업자 이름을 입력하세요.'; f.who.focus(); return; }
+    userLog.unshift({ t: Date.now(), id: e.id, code: e.code, kind: f.kind.value, who: who, min: f.min.value ? Number(f.min.value) : 0, memo: f.memo.value.trim() });
+    saveLog(); decision[e.id] = 'done'; renderZone(e); toast('기록이 저장되었습니다');
+  }
+});
+
+route();
+})();
+</script>
